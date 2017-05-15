@@ -1,94 +1,107 @@
 'use strict';
-
 var gulp = require('gulp'),
-  concat = require('gulp-concat'),
-  uglify = require('gulp-uglify'),
-  autoprefixer = require('gulp-autoprefixer'),
-  compass = require('gulp-compass'),
-  jade = require('gulp-jade'),
-  webserver = require('gulp-webserver');
+    concat = require('gulp-concat'),
+    uglify = require('gulp-uglify'),
+    autoprefixer = require('gulp-autoprefixer'),
+    sass = require('gulp-sass'),
+    jade = require('gulp-jade'),
+    webserver = require('gulp-webserver'),
+    minifyCss = require('gulp-minify-css'),
+    rename = require('gulp-rename'),
+    plumber = require('gulp-plumber'),
+    watch = require('gulp-watch'),
+    babel = require('gulp-babel'),
+    sourcemaps = require('gulp-sourcemaps');
 
 var path = {
-  app: './app',
-  dev: './builds/dev'
+    app: './app',
+    dev: './builds/dev'
 }
 var libsArray = [
-  './bower_components/jquery/dist/jquery.js'
+    './node_modules/jquery/dist/jquery.js'
 ];
+
 gulp.task('libsjs', function () {
-  gulp.src(libsArray)
-    .pipe(concat('libs.js'))
-    .pipe(gulp.dest('builds/dev'));
+    gulp.src(libsArray)
+        .pipe(concat('libs.js'))
+        .pipe(gulp.dest('builds/dev'));
 });
 
 gulp.task('js', function () {
-  gulp.src([
-      path.app + '/js/**/*.js',
-    ])
-    .pipe(concat('app.js'))
-    .pipe(gulp.dest(path.dev));
+    return gulp.src(path.app + '/js/**/*.js')
+        .pipe(plumber())
+        .pipe(sourcemaps.init())
+        .pipe(babel({
+            presets: ['es2015']
+        }))
+        .pipe(concat('app.js'))
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest(path.dev));
 });
 
-// gulp.task('css', function(){
-//   gulp.src([
-//      'bower_components/angular/angular-csp.css',
-//     ])
-//     .pipe(concat('theme.css'))
-//     .pipe(gulp.dest('builds/dev/css'));
-// });
 gulp.task('html', function () {
-  gulp.src(path.app + '/**/*.jade')
-    .pipe(jade())
-    .pipe(gulp.dest(path.dev));
+    gulp.src(path.app + '/**/*.jade')
+        .pipe(jade())
+        .pipe(gulp.dest(path.dev));
 });
 
 gulp.task('img', function () {
-  gulp.src(path.app + '/img/**/*.*')
-    .pipe(gulp.dest(path.dev + '/img/'));
+    gulp.src(path.app + '/img/**/*.*')
+        .pipe(gulp.dest(path.dev + '/img/'));
 });
 
-gulp.task('fonts', function () {
-  gulp.src('bower_components/bootstrap/dist/fonts/**/*.*')
-    .pipe(gulp.dest(path.dev + '/assets/fonts/'));
+gulp.task('assets', function () {
+    gulp.src(path.app + '/assets/**/*.*')
+        .pipe(gulp.dest(path.dev + '/assets/'));
 });
 
-gulp.task('scss', function () {
-  gulp.src([
-      path.app + '/scss/**/*.scss'
-    ])
-    .pipe(compass({
-      sourcemap: true,
-      css: path.dev + '/css',
-      sass: path.app + '/scss',
-      image: path.dev + '/img',
-      require: ['compass', 'singularitygs']
-    }))
-    .pipe(autoprefixer())
-    .pipe(gulp.dest(path.dev + '/css'));
+gulp.task('scss', function ( done ) {
+    gulp.src(path.app + '/scss/**/*.scss')
+        .pipe(plumber())
+        .pipe(sass())
+        .on('error', sass.logError)
+        .pipe(gulp.dest(path.dev + '/css/'))
+        .pipe(minifyCss({
+            keepSpecialComments: 0
+        }))
+        .pipe(rename({ extname: '.min.css' }))
+        .pipe(gulp.dest(path.dev + '/css/'))
+        .on('end', done);
 });
 
 gulp.task('watch', function () {
-  gulp.watch(path.app + '/**/*.js', ['js']);
-  gulp.watch(path.app + '/scss/**/*.scss', ['scss']);
-  gulp.watch(path.app + '/img/**/*.*', ['img']);
-  gulp.watch(path.app + '/**/*.jade', ['html']);
+    watch(path.app + '/scss/**/*.scss', function () {
+        gulp.start('scss')
+    });
+    watch(path.app + '/**/*.js', function () {
+        gulp.start('js')
+    });
+    watch(path.app + '/**/*.jade', function () {
+        gulp.start('html')
+    });
+    watch(path.app + '/img/**/*.*', function () {
+        gulp.start('img')
+    });
+    watch(path.app + '/assets/**/*.*', function () {
+        gulp.start('assets')
+    });
 });
 
 gulp.task('webserver', function () {
-  gulp.src(path.dev)
-    .pipe(webserver({
-      livereload: true,
-      open: true
-    }));
+    gulp.src(path.dev)
+        .pipe(webserver({
+            livereload: true,
+            open: true
+        }));
 });
 
 gulp.task('default', [
-  'js',
-  'libsjs',
-  'scss',
-  'img',
-  'html',
-  'watch',
-  'webserver',
-  'fonts'
+    'js',
+    'libsjs',
+    'scss',
+    'img',
+    'html',
+    'watch',
+    'webserver',
+    'assets'
 ]);
