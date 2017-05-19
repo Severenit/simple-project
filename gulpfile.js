@@ -1,5 +1,5 @@
 'use strict';
-var gulp = require('gulp'),
+const gulp = require('gulp'),
     concat = require('gulp-concat'),
     uglify = require('gulp-uglify'),
     autoprefixer = require('gulp-autoprefixer'),
@@ -13,11 +13,11 @@ var gulp = require('gulp'),
     babel = require('gulp-babel'),
     sourcemaps = require('gulp-sourcemaps');
 
-var path = {
+const path = {
     app: './app',
     dev: './builds/dev'
 }
-var libsArray = [
+const libsArray = [
     './node_modules/jquery/dist/jquery.js'
 ];
 
